@@ -14,21 +14,58 @@ Description:
 #include <stdio.h>
 #include <netdb.h>
 
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <err.h>
+#include <string.h>
+
+
 #define BUFFER_SIZE 32768
 #define BACKLOG_SIZE 16
 
-void createNetworkSocket(char* hostname, char* port);
+uint8_t createNetworkSocket(char* hostname, char* port);
+void processSocketConenctions(uint8_t main_socket, struct addrinfo *addrs);
+void parseRequest(char* buffer, ssize_t bytesRecv);
+void handleGetRequest();
+void handlePutRequest();
 
-void createNetworkSocket(char* hostname, char* port, struct addrinfo *addrs, struct addrinfo *hints) {
+void handlePutRequest() {
+
+}
+
+void handleGetRequest() {
+
+}
+
+void parseRequest(char* buffer, ssize_t bytesRecv) {
+    char* token;
+    token = strtok(buffer, " ");
+    printf("%s\n", token);
+}
+
+void processSocketConenctions(uint8_t main_socket, struct addrinfo *addrs) {
+    char buffer[BUFFER_SIZE];
+    uint8_t sockfd = 1;
+    while(sockfd) {
+        sockfd = accept(main_socket, NULL, NULL);
+        ssize_t bytesRecv = recv(sockfd, buffer, sizeof(buffer), 0);
+        parseRequest(buffer, bytesRecv);
+        // resolve request
+    }
+}
+
+uint8_t createNetworkSocket(char* hostname, char* port, struct addrinfo *addrs, struct addrinfo *hints) {
     hints->ai_family = AF_INET;
     hints->ai_socktype = SOCK_STREAM;
     getaddrinfo(hostname, port, hints, &addrs);
-    int main_socket = socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol);
-    int enable = 1;
+    uint8_t main_socket = socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol);
+    uint8_t enable = 1;
     setsockopt(main_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
     bind(main_socket, addrs->ai_addr, addrs->ai_addrlen);
     listen(main_socket, BACKLOG_SIZE);
-    fprintf(stdout, "Server listening on %s:%s\n", hostname, port);
+    return main_socket;
 }
 
 int main(int argc, char** argv) {
@@ -47,7 +84,8 @@ int main(int argc, char** argv) {
     }
     if (hostname && port) {
         struct addrinfo *addrs, hints = {};
-        createNetworkSocket(hostname, port, addrs, &hints);
+        uint8_t main_socket = createNetworkSocket(hostname, port, addrs, &hints);
+        if (main_socket) processSocketConenctions(main_socket, addrs);
     }
     return 0;
 }
