@@ -19,11 +19,10 @@ Description:
 
 void createNetworkSocket(char* hostname, char* port);
 
-void createNetworkSocket(char* hostname, char* port) {
-    struct addrinfo *addrs, hints = {};
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    getaddrinfo(hostname, port, &hints, &addrs);
+void createNetworkSocket(char* hostname, char* port, struct addrinfo *addrs, struct addrinfo *hints) {
+    hints->ai_family = AF_INET;
+    hints->ai_socktype = SOCK_STREAM;
+    getaddrinfo(hostname, port, hints, &addrs);
     int main_socket = socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol);
     int enable = 1;
     setsockopt(main_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
@@ -47,7 +46,8 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Error: %d commandline arguments given, 1 required\n", argc);
     }
     if (hostname && port) {
-        createNetworkSocket(hostname, port);
+        struct addrinfo *addrs, hints = {};
+        createNetworkSocket(hostname, port, addrs, &hints);
     }
     return 0;
 }
