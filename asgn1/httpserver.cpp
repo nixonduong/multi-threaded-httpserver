@@ -40,18 +40,11 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
     char http[BUFFER_SIZE];
     ssize_t responseVal;
     sscanf(buffer, "%*s /%s %s\r\n\r\n", filename, http);
-   
-    //Memory allocated for responseHeader
     char response[BUFFER_SIZE];
-    uint8_t status = 200; // OK\r\nContent-Length: ";
-
-    // Memory allocated for responseData
+    uint8_t status = 200;
     char readBuffer[BUFFER_SIZE];
     char responseData[BUFFER_SIZE];
-
-    char cContentLength[BUFFER_SIZE];
     ssize_t contentLength = -1;
-
     ssize_t fileDescriptor = open(filename, O_RDONLY);
     if (fileDescriptor == -1) {
         status = 404;
