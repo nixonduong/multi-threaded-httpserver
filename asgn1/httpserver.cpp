@@ -37,30 +37,40 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
 
 void handleGetRequest(char* buffer, uint8_t sockfd) {
     char filename[27];
-    sscanf(buffer, "%*s /%s", filename);
+    char http[BUFFER_SIZE];
+    ssize_t responseVal;
+    sscanf(buffer, "%*s /%s %s\r\n\r\n", filename, http);
    
+    //Memory allocated for responseHeader
+    char response[BUFFER_SIZE];
+    uint8_t status = 200; // OK\r\nContent-Length: ";
+
+    // Memory allocated for responseData
     char readBuffer[BUFFER_SIZE];
     char responseData[BUFFER_SIZE];
 
+    char cContentLength[BUFFER_SIZE];
+    ssize_t contentLength = -1;
 
     ssize_t fileDescriptor = open(filename, O_RDONLY);
     if (fileDescriptor == -1) {
-        // SET STATUS TO 404
-        warn("%s", filename);
+        status = 404;
     } else {
         ssize_t bytesRead = 1;
         while (bytesRead) {
             bytesRead = read(fileDescriptor, readBuffer, 1);
+            contentLength += bytesRead;
             if (bytesRead == -1) {
-                warn("%s", filename);
                 break;
             } else {
                 strcat(responseData, readBuffer);
             }
         }
-        printf("%s", responseData);
+        close(fileDescriptor);
+        responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %d\r\n\r\n%s", http, status, contentLength, responseData);
+        send(sockfd, response, responseVal,0);
+        close(sockfd);
     }
-    close(fileDescriptor);
 }
 
 void parseRequest(char* buffer, ssize_t bytesRecv, uint8_t sockfd) {
