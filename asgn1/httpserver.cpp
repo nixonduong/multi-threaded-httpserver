@@ -38,7 +38,29 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
 void handleGetRequest(char* buffer, uint8_t sockfd) {
     char filename[27];
     sscanf(buffer, "%*s /%s", filename);
-    printf("%s\n", filename);
+   
+    char readBuffer[BUFFER_SIZE];
+    char responseData[BUFFER_SIZE];
+
+
+    ssize_t fileDescriptor = open(filename, O_RDONLY);
+    if (fileDescriptor == -1) {
+        // SET STATUS TO 404
+        warn("%s", filename);
+    } else {
+        ssize_t bytesRead = 1;
+        while (bytesRead) {
+            bytesRead = read(fileDescriptor, readBuffer, 1);
+            if (bytesRead == -1) {
+                warn("%s", filename);
+                break;
+            } else {
+                strcat(responseData, readBuffer);
+            }
+        }
+        printf("%s", responseData);
+    }
+    close(fileDescriptor);
 }
 
 void parseRequest(char* buffer, ssize_t bytesRecv, uint8_t sockfd) {
@@ -59,7 +81,6 @@ void processSocketConenctions(uint8_t main_socket, struct addrinfo *addrs) {
         sockfd = accept(main_socket, NULL, NULL);
         ssize_t bytesRecv = recv(sockfd, buffer, sizeof(buffer), 0);
         parseRequest(buffer, bytesRecv, sockfd);
-        // resolve request
     }
 }
 
