@@ -24,15 +24,13 @@ Description:
 #define BACKLOG_SIZE 16
 
 uint8_t createNetworkSocket(char* hostname, char* port);
-void processSocketConenctions(uint8_t main_socket, struct addrinfo *addrs);
-void parseRequest(char* buffer, ssize_t bytesRecv, uint8_t sockfd);
+void processSocketConenctions(uint8_t main_socket);
+void parseRequest(char* buffer, uint8_t sockfd);
 void handleGetRequest(char* buffer, uint8_t sockfd);
 void handlePutRequest(char* buffer, uint8_t sockfd);
 
 void handlePutRequest(char* buffer, uint8_t sockfd) {
-    char* token;
-    token = strtok(buffer, " ");
-    printf("%s\n", "PUT");
+
 }
 
 void handleGetRequest(char* buffer, uint8_t sockfd) {
@@ -41,7 +39,7 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
     ssize_t responseVal;
     sscanf(buffer, "%*s /%s %s\r\n\r\n", filename, http);
     char response[BUFFER_SIZE];
-    uint8_t status = 200;
+    uint16_t status = 200;
     char readBuffer[BUFFER_SIZE];
     char responseData[BUFFER_SIZE];
     ssize_t contentLength = -1;
@@ -59,14 +57,15 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
                 strcat(responseData, readBuffer);
             }
         }
+        // Figure out why response data has an endl
         close(fileDescriptor);
-        responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %d\r\n\r\n%s", http, status, contentLength, responseData);
+        responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n\r\n%s", http, status, contentLength, responseData);
         send(sockfd, response, responseVal,0);
         close(sockfd);
     }
 }
 
-void parseRequest(char* buffer, ssize_t bytesRecv, uint8_t sockfd) {
+void parseRequest(char* buffer, uint8_t sockfd) {
     char type[3];
     sscanf(buffer, "%s", type);
     if (strcmp(type, "GET")) {
@@ -77,13 +76,13 @@ void parseRequest(char* buffer, ssize_t bytesRecv, uint8_t sockfd) {
     }
 }
 
-void processSocketConenctions(uint8_t main_socket, struct addrinfo *addrs) {
+void processSocketConenctions(uint8_t main_socket) {
     char buffer[BUFFER_SIZE];
     uint8_t sockfd = 1;
     while(1) {
         sockfd = accept(main_socket, NULL, NULL);
-        ssize_t bytesRecv = recv(sockfd, buffer, sizeof(buffer), 0);
-        parseRequest(buffer, bytesRecv, sockfd);
+        recv(sockfd, buffer, sizeof(buffer), 0);
+        parseRequest(buffer, sockfd);
     }
 }
 
@@ -116,9 +115,10 @@ int main(int argc, char** argv) {
         exit(1);
     }
     if (hostname && port) {
-        struct addrinfo *addrs, hints = {};
+        struct addrinfo *addrs = nullptr;
+        struct addrinfo hints = {};
         uint8_t main_socket = createNetworkSocket(hostname, port, addrs, &hints);
-        if (main_socket) processSocketConenctions(main_socket, addrs);
+        if (main_socket) processSocketConenctions(main_socket);
     }
     return 0;
 }
