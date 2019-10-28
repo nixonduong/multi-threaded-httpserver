@@ -33,68 +33,19 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
     char filename[27];
     char http[BUFFER_SIZE];
     ssize_t contentLength = 0;
+
+
     uint16_t status = 200;
-
-
     char requestData[BUFFER_SIZE];
+    char headerData[BUFFER_SIZE];
 
-    char* token;
-    token = strtok(buffer, "\r\n");
-    uint8_t lineNumber = 0;
-    while (token != NULL) {
-        if (lineNumber == 0) {
-             sscanf(token, "%*s /%s %s", filename, http);
-        }
-        if (lineNumber == 4) {
-            char *subtoken;
-            subtoken = strtok(token, " ");
-            subtoken = strtok(NULL, " ");
-            contentLength = atoi(subtoken);
-        }
-        lineNumber++;
-        token = strtok(NULL, "\r\n");
-    }
-    printf("%s\n", "============================");
-    printf("Filename: %s\n", filename);
-    printf("HTTP: %s\n", http);
-    printf("Content Length: %d\n", contentLength);
-    printf("Request Data: %s\n", requestData);
-    printf("%s\n", "============================");
-
-    // PUT /test.txt HTTP/1.1
-    // Host: localhost:1127
-    // User-Agent: curl/7.54.0
-    // Accept: */*
-    // Content-Length: 8
-    // Content-Type: application/x-www-form-urlencoded
-
-    // test.txt
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    sscanf(buffer, "%*s /%s %s", filename, http);
 
     // ssize_t fileDescriptor = open(filename, O_CREAT);
     // if (fileDescriptor == -1) {
     //     status = 404;
     // } else {
-    //     // IMPLEMENT PUT
-    //     ssize_t bytesRead = 1;
-    //     write(fileDescriptor, requestData, )
+    //     write(fileDescriptor, requestData, contentLength);
     // }
     // close(fileDescriptor);
     // responseVal = sprintf(response, "%s %d OK\r\n", http, status);
@@ -117,6 +68,7 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
         status = 404;
     } else {
         ssize_t bytesRead = 1;
+        // be careful, could except 
         while (bytesRead) {
             bytesRead = read(fileDescriptor, readBuffer, 1);
             contentLength += bytesRead;
@@ -129,6 +81,7 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
     }
     close(fileDescriptor);
     responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n\r\n%s", http, status, contentLength, responseData);
+    printf("%s", response);
     send(sockfd, response, responseVal, 0);
     close(sockfd);
 }
