@@ -30,19 +30,88 @@ void handleGetRequest(char* buffer, uint8_t sockfd);
 void handlePutRequest(char* buffer, uint8_t sockfd);
 
 void handlePutRequest(char* buffer, uint8_t sockfd) {
+    char filename[27];
+    char http[BUFFER_SIZE];
+    ssize_t contentLength = 0;
+    uint16_t status = 200;
 
+
+    char requestData[BUFFER_SIZE];
+
+    char* token;
+    token = strtok(buffer, "\r\n");
+    uint8_t lineNumber = 0;
+    while (token != NULL) {
+        if (lineNumber == 0) {
+             sscanf(token, "%*s /%s %s", filename, http);
+        }
+        if (lineNumber == 4) {
+            char *subtoken;
+            subtoken = strtok(token, " ");
+            subtoken = strtok(NULL, " ");
+            contentLength = atoi(subtoken);
+        }
+        lineNumber++;
+        token = strtok(NULL, "\r\n");
+    }
+    printf("%s\n", "============================");
+    printf("Filename: %s\n", filename);
+    printf("HTTP: %s\n", http);
+    printf("Content Length: %d\n", contentLength);
+    printf("Request Data: %s\n", requestData);
+    printf("%s\n", "============================");
+
+    // PUT /test.txt HTTP/1.1
+    // Host: localhost:1127
+    // User-Agent: curl/7.54.0
+    // Accept: */*
+    // Content-Length: 8
+    // Content-Type: application/x-www-form-urlencoded
+
+    // test.txt
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // ssize_t fileDescriptor = open(filename, O_CREAT);
+    // if (fileDescriptor == -1) {
+    //     status = 404;
+    // } else {
+    //     // IMPLEMENT PUT
+    //     ssize_t bytesRead = 1;
+    //     write(fileDescriptor, requestData, )
+    // }
+    // close(fileDescriptor);
+    // responseVal = sprintf(response, "%s %d OK\r\n", http, status);
+    // send(sockfd, response, responseVal, 0);
+    // close(sockfd);
 }
 
 void handleGetRequest(char* buffer, uint8_t sockfd) {
+    ssize_t responseVal;
+    ssize_t contentLength = -1;
+    uint16_t status = 200;
     char filename[27];
     char http[BUFFER_SIZE];
-    ssize_t responseVal;
-    sscanf(buffer, "%*s /%s %s\r\n\r\n", filename, http);
     char response[BUFFER_SIZE];
-    uint16_t status = 200;
     char readBuffer[BUFFER_SIZE];
     char responseData[BUFFER_SIZE];
-    ssize_t contentLength = -1;
+    sscanf(buffer, "%*s /%s %s\r\n\r\n", filename, http);
     ssize_t fileDescriptor = open(filename, O_RDONLY);
     if (fileDescriptor == -1) {
         status = 404;
@@ -57,22 +126,21 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
                 strcat(responseData, readBuffer);
             }
         }
-        // Figure out why response data has an endl
-        close(fileDescriptor);
-        responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n\r\n%s", http, status, contentLength, responseData);
-        send(sockfd, response, responseVal,0);
-        close(sockfd);
     }
+    close(fileDescriptor);
+    responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n\r\n%s", http, status, contentLength, responseData);
+    send(sockfd, response, responseVal, 0);
+    close(sockfd);
 }
 
 void parseRequest(char* buffer, uint8_t sockfd) {
     char type[3];
     sscanf(buffer, "%s", type);
-    if (strcmp(type, "GET")) {
+    if (strcmp(type, "GET") == 0) {
         handleGetRequest(buffer, sockfd);
     }
-    if (strcmp(type, "PUT")) {
-        handleGetRequest(buffer, sockfd);
+    if (strcmp(type, "PUT") == 0) {
+        handlePutRequest(buffer, sockfd);
     }
 }
 
