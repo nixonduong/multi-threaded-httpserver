@@ -28,11 +28,29 @@ void processSocketConenctions(uint8_t main_socket);
 void parseRequest(char* buffer, uint8_t sockfd);
 void handleGetRequest(char* buffer, uint8_t sockfd);
 void handlePutRequest(char* buffer, uint8_t sockfd);
-// bool isValidResourceName(char* resourceName);
+bool isValidResourceName(char resourceName[]);
 
-// bool isValidResourceName(char* resourceName) {
-    
-// }
+bool isValidResourceName(char resourceName[]) {
+    ssize_t length = strlen(resourceName);
+    bool valid = true;
+    if (length != 27) {
+        return false;
+    } else {
+        for (ssize_t i = 0; i < length; i++) {
+            ssize_t asciiVal = static_cast<ssize_t>(resourceName[i]);
+            if ((asciiVal >= 48 && asciiVal <= 57) ||
+               (asciiVal >= 97 && asciiVal <= 122) || 
+               (asciiVal >= 65 && asciiVal <= 90) || 
+               (asciiVal == 95) || 
+               (asciiVal == 45)) {
+                   valid = true;
+               } else {
+                   return false;
+               }
+        }
+    }
+    return valid;
+}
 
 void handlePutRequest(char* buffer, uint8_t sockfd) {
     char filename[27];
@@ -51,6 +69,8 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
     sscanf(subString, "%*s %s", charLength);
     contentLength = atoi(charLength);
     subString = strstr(buffer, "\r\n\r\n");
+
+
     sscanf(subString, "\n %s", requestData);
 
 
@@ -93,40 +113,47 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
     ssize_t responseVal = 0;
     ssize_t contentLength = -1;
     uint16_t status = 200;
-    char filename[27];
+    char filename[BUFFER_SIZE];
     char http[BUFFER_SIZE];
     char response[BUFFER_SIZE];
     char readBuffer[BUFFER_SIZE];
     char tempBuffer[BUFFER_SIZE];
     sscanf(buffer, "%*s /%s %s\r\n\r\n", filename, http);
-    ssize_t fileDescriptor = open(filename, O_RDONLY);
-    if (fileDescriptor == -1) {
-        status = 404;
+    if (isValidResourceName(filename)) {
+        ssize_t fileDescriptor = open(filename, O_RDONLY);
+        if (fileDescriptor == -1) {
+            status = 404;
+            responseVal = sprintf(response, "%s %d NOT FOUND\r\n\r\n", http, status);
+            send(sockfd, response, responseVal, 0);
+        } else {
+            ssize_t bytesRead = 1;
+            while (bytesRead) {
+                bytesRead = read(fileDescriptor, tempBuffer, 1);
+                contentLength += bytesRead;
+                if (bytesRead == -1) {
+                    break;
+                }
+            }
+            close(fileDescriptor);
+            responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n\r\n", http, status, contentLength);
+            send(sockfd, response, responseVal, 0);
+            fileDescriptor = open(filename, O_RDONLY);
+            ssize_t counter = 0;
+            while (counter < contentLength) {
+                bytesRead = read(fileDescriptor, readBuffer, 1);
+                if (bytesRead == -1) {
+                    break;
+                } else {
+                    send(sockfd, readBuffer, bytesRead, 0);
+                }
+                counter++;
+            }
+            close(fileDescriptor);
+        }
     } else {
-        ssize_t bytesRead = 1;
-        while (bytesRead) {
-            bytesRead = read(fileDescriptor, tempBuffer, 1);
-            contentLength += bytesRead;
-            if (bytesRead == -1) {
-                 break;
-            }
-        }
-        close(fileDescriptor);
-        responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n\r\n", http, status, contentLength);
+        status = 400;
+        responseVal = sprintf(response, "%s %d BAD REQUEST\r\n\r\n", http, status);
         send(sockfd, response, responseVal, 0);
-    
-        fileDescriptor = open(filename, O_RDONLY);
-        ssize_t counter = 0;
-        while (counter < contentLength) {
-            bytesRead = read(fileDescriptor, readBuffer, 1);
-            if (bytesRead == -1) {
-                break;
-            } else {
-                send(sockfd, readBuffer, bytesRead, 0);
-            }
-            counter++;
-        }
-        close(fileDescriptor);
     }
     close(sockfd);
 }
