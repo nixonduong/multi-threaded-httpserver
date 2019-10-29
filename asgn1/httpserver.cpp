@@ -30,6 +30,8 @@ void handleGetRequest(char* buffer, uint8_t sockfd);
 void handlePutRequest(char* buffer, uint8_t sockfd);
 
 void handlePutRequest(char* buffer, uint8_t sockfd) {
+    printf("%s\n", "Put Request CAllED:");
+
     char filename[27];
     char http[BUFFER_SIZE];
     ssize_t contentLength = 0;
@@ -40,6 +42,19 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
     char headerData[BUFFER_SIZE];
 
     sscanf(buffer, "%*s /%s %s", filename, http);
+
+    char* subString;
+    char charLength[BUFFER_SIZE];
+    subString = strstr(buffer, "Content-Length");
+    sscanf(subString, "%*s %s", charLength);
+    contentLength = atoi(charLength);
+
+    printf("Filename: %s\n", filename);
+    printf("Http: %s\n", http);
+    printf("Content-Length: %d\n", contentLength);
+
+
+
 
     // ssize_t fileDescriptor = open(filename, O_CREAT);
     // if (fileDescriptor == -1) {
