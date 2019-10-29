@@ -98,7 +98,6 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
     char response[BUFFER_SIZE];
     char readBuffer[BUFFER_SIZE];
     char tempBuffer[BUFFER_SIZE];
-
     sscanf(buffer, "%*s /%s %s\r\n\r\n", filename, http);
     ssize_t fileDescriptor = open(filename, O_RDONLY);
     if (fileDescriptor == -1) {
@@ -117,14 +116,15 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
         send(sockfd, response, responseVal, 0);
     
         fileDescriptor = open(filename, O_RDONLY);
-        bytesRead = 1;
-        while (bytesRead) {
+        ssize_t counter = 0;
+        while (counter < contentLength) {
             bytesRead = read(fileDescriptor, readBuffer, 1);
             if (bytesRead == -1) {
                 break;
             } else {
-                write(sockfd, readBuffer, bytesRead);
+                send(sockfd, readBuffer, bytesRead, 0);
             }
+            counter++;
         }
         close(fileDescriptor);
     }
