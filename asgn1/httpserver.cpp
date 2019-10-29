@@ -41,6 +41,7 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
     ssize_t contentLength = 0;
     ssize_t responseVal = 0;
     uint16_t status = 200;
+    uint8_t statusMSG = 0;
     ssize_t fileDescriptor;
     char requestData[BUFFER_SIZE];
     char* subString;
@@ -52,6 +53,7 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
     subString = strstr(buffer, "\r\n\r\n");
     sscanf(subString, "\n %s", requestData);
 
+
     printf("%s\n", "=================================");
     printf("Filename: %s\n", filename);
     printf("Http: %s\n", http);
@@ -59,7 +61,11 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
     printf("Request Data: %s\n", requestData);
     printf("%s\n", "=================================");
     
-
+    ssize_t fileTest = open(filename, O_RDONLY);
+    if (fileTest == -1) {
+        statusMSG = 1;
+    }
+    close(fileTest);
 
     fileDescriptor = open(filename, O_CREAT);
     if (fileDescriptor == -1) {
@@ -68,8 +74,12 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
         write(fileDescriptor, requestData, contentLength);
     }
     close(fileDescriptor);
-    responseVal = sprintf(response, "%s %d OK\r\n\r\n", http, status);
-
+    if (statusMSG == 0) {
+        responseVal = sprintf(response, "%s %d OK\r\n\r\n", http, status);
+    }
+    if (statusMSG == 1) {
+        responseVal = sprintf(response, "%s %d CREATED\r\n\r\n", http, status);
+    }
 
     printf("Response: %s\n", response);
     printf("ResponseVal: %d\n", responseVal);
