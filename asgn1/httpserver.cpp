@@ -28,44 +28,55 @@ void processSocketConenctions(uint8_t main_socket);
 void parseRequest(char* buffer, uint8_t sockfd);
 void handleGetRequest(char* buffer, uint8_t sockfd);
 void handlePutRequest(char* buffer, uint8_t sockfd);
+bool isValidResourceName(char* resourceName);
+
+bool isValidResourceName(char* resourceName) {
+
+}
 
 void handlePutRequest(char* buffer, uint8_t sockfd) {
-    printf("%s\n", "Put Request CAllED:");
-
     char filename[27];
     char http[BUFFER_SIZE];
+    char response[BUFFER_SIZE];
     ssize_t contentLength = 0;
-
-
+    ssize_t responseVal = 0;
     uint16_t status = 200;
+    ssize_t fileDescriptor;
     char requestData[BUFFER_SIZE];
-    char headerData[BUFFER_SIZE];
-
-    sscanf(buffer, "%*s /%s %s", filename, http);
-
     char* subString;
     char charLength[BUFFER_SIZE];
+    sscanf(buffer, "%*s /%s %s", filename, http);
     subString = strstr(buffer, "Content-Length");
     sscanf(subString, "%*s %s", charLength);
     contentLength = atoi(charLength);
+    subString = strstr(buffer, "\r\n\r\n");
+    sscanf(subString, "\n %s", requestData);
 
+    printf("%s\n", "=================================");
     printf("Filename: %s\n", filename);
     printf("Http: %s\n", http);
     printf("Content-Length: %d\n", contentLength);
+    printf("Request Data: %s\n", requestData);
+    printf("%s\n", "=================================");
+    
 
 
+    fileDescriptor = open(filename, O_CREAT);
+    if (fileDescriptor == -1) {
+        status = 201;
+    } else {
+        write(fileDescriptor, requestData, contentLength);
+    }
+    close(fileDescriptor);
+    responseVal = sprintf(response, "%s %d OK\r\n\r\n", http, status);
 
 
-    // ssize_t fileDescriptor = open(filename, O_CREAT);
-    // if (fileDescriptor == -1) {
-    //     status = 404;
-    // } else {
-    //     write(fileDescriptor, requestData, contentLength);
-    // }
-    // close(fileDescriptor);
-    // responseVal = sprintf(response, "%s %d OK\r\n", http, status);
-    // send(sockfd, response, responseVal, 0);
-    // close(sockfd);
+    printf("Response: %s\n", response);
+    printf("ResponseVal: %d\n", responseVal);
+  
+
+    send(sockfd, response, responseVal, 0);
+    close(sockfd);
 }
 
 void handleGetRequest(char* buffer, uint8_t sockfd) {
@@ -83,7 +94,7 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
         status = 404;
     } else {
         ssize_t bytesRead = 1;
-        // be careful, could except 
+        // be careful, could exceed 32kiB 
         while (bytesRead) {
             bytesRead = read(fileDescriptor, readBuffer, 1);
             contentLength += bytesRead;
@@ -96,7 +107,6 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
     }
     close(fileDescriptor);
     responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n\r\n%s", http, status, contentLength, responseData);
-    printf("%s", response);
     send(sockfd, response, responseVal, 0);
     close(sockfd);
 }
