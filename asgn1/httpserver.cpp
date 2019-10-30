@@ -56,8 +56,8 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
     char filename[27];
     char http[BUFFER_SIZE];
     char response[BUFFER_SIZE];
-    ssize_t contentLength = 0;
-    ssize_t responseVal = 0;
+    size_t contentLength = 0;
+    uint32_t responseVal = 0;
     uint16_t status = 200;
     uint8_t statusMSG = 0;
     ssize_t fileDescriptor;
@@ -65,47 +65,55 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
     char* subString;
     char charLength[BUFFER_SIZE];
     sscanf(buffer, "%*s /%s %s", filename, http);
-    subString = strstr(buffer, "Content-Length");
-    sscanf(subString, "%*s %s", charLength);
-    contentLength = atoi(charLength);
-    subString = strstr(buffer, "\r\n\r\n");
-
-
-    sscanf(subString, "\n %s", requestData);
-
-
-    // printf("%s\n", "=================================");
-    // printf("Filename: %s\n", filename);
-    // printf("Http: %s\n", http);
-    // printf("Content-Length: %d\n", contentLength);
-    // printf("Request Data: %s\n", requestData);
-    // printf("%s\n", "=================================");
-    
-    ssize_t fileTest = open(filename, O_RDONLY);
-    if (fileTest == -1) {
-        statusMSG = 1;
-    }
-    close(fileTest);
-
-    fileDescriptor = open(filename, O_CREAT);
-    if (fileDescriptor == -1) {
-        status = 201;
+    if (isValidResourceName(filename)) {
+        subString = strstr(buffer, "Content-Length");
+        sscanf(subString, "%*s %s", charLength);
+        contentLength = atoi(charLength);
+        subString = strstr(buffer, "\r\n\r\n");
+        sscanf(subString, "\n %s", requestData);
+        ssize_t fileTest = open(filename, O_RDONLY);
+        if (fileTest == -1) {
+            statusMSG = 1;
+            status = 201;
+        }
+        close(fileTest);
+        fileDescriptor = open(filename, O_WRONLY | O_CREAT | O_TRUNC);
+        if (fileDescriptor == -1) {
+            status = 201;
+        } else {
+            if (strlen(requestData) == contentLength) {
+                write(fileDescriptor, requestData, contentLength);
+            }
+            if (strlen(requestData) < contentLength) {
+                write(fileDescriptor, requestData, strlen(requestData));
+                contentLength -= strlen(requestData);
+                size_t counter = 0;
+                ssize_t bytesRead = 0;
+                char readBuffer[BUFFER_SIZE];
+                while (counter < contentLength) {
+                    bytesRead = read(fileDescriptor, readBuffer, 1);
+                    if (bytesRead == -1) {
+                        break;
+                    } else {
+                        send(sockfd, readBuffer, bytesRead, 0);
+                    }
+                    counter++;
+                }
+            }
+        }
+        close(fileDescriptor);
+        if (statusMSG == 0) {
+            responseVal = sprintf(response, "%s %d OK\r\n\r\n", http, status);
+        }
+        if (statusMSG == 1) {
+            responseVal = sprintf(response, "%s %d CREATED\r\n\r\n", http, status);
+        }
+        send(sockfd, response, responseVal, 0);
     } else {
-        write(fileDescriptor, requestData, contentLength);
+        status = 400;
+        responseVal = sprintf(response, "%s %d BAD REQUEST\r\n\r\n", http, status);
+        send(sockfd, response, responseVal, 0);
     }
-    close(fileDescriptor);
-    if (statusMSG == 0) {
-        responseVal = sprintf(response, "%s %d OK\r\n\r\n", http, status);
-    }
-    if (statusMSG == 1) {
-        responseVal = sprintf(response, "%s %d CREATED\r\n\r\n", http, status);
-    }
-
-    // printf("Response: %s\n", response);
-    // printf("ResponseVal: %d\n", responseVal);
-  
-
-    send(sockfd, response, responseVal, 0);
     close(sockfd);
 }
 
