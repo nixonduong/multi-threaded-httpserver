@@ -64,7 +64,7 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
     char requestData[BUFFER_SIZE];
     char* subString;
     char charLength[BUFFER_SIZE];
-    sscanf(buffer, "%*s /%s %s", filename, http);
+    sscanf(buffer, "%*s %s %s", filename, http);
     if (isValidResourceName(filename)) {
         subString = strstr(buffer, "Content-Length");
         sscanf(subString, "%*s %s", charLength);
@@ -143,7 +143,7 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
                 }
             }
             close(fileDescriptor);
-            responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n", http, status, contentLength);
+            responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n\r\n", http, status, contentLength);
             send(sockfd, response, responseVal, 0);
             fileDescriptor = open(filename, O_RDONLY);
             ssize_t counter = 0;
