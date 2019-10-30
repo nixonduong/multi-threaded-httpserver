@@ -103,15 +103,15 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
         }
         close(fileDescriptor);
         if (statusMSG == 0) {
-            responseVal = sprintf(response, "%s %d OK\r\n\r\n", http, status);
+            responseVal = sprintf(response, "%s %d OK\r\n", http, status);
         }
         if (statusMSG == 1) {
-            responseVal = sprintf(response, "%s %d Created\r\n\r\n", http, status);
+            responseVal = sprintf(response, "%s %d Created\r\n", http, status);
         }
         send(sockfd, response, responseVal, 0);
     } else {
         status = 400;
-        responseVal = sprintf(response, "%s %d Bad Request\r\n\r\n", http, status);
+        responseVal = sprintf(response, "%s %d Bad Request\r\n", http, status);
         send(sockfd, response, responseVal, 0);
     }
     close(sockfd);
@@ -131,7 +131,7 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
         ssize_t fileDescriptor = open(filename, O_RDONLY);
         if (fileDescriptor == -1) {
             status = 404;
-            responseVal = sprintf(response, "%s %d Not Found\r\n\r\n", http, status);
+            responseVal = sprintf(response, "%s %d Not Found\r\n", http, status);
             send(sockfd, response, responseVal, 0);
         } else {
             ssize_t bytesRead = 1;
@@ -143,7 +143,7 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
                 }
             }
             close(fileDescriptor);
-            responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n\r\n", http, status, contentLength);
+            responseVal = sprintf(response, "%s %d OK\r\nContent-Length: %zd\r\n", http, status, contentLength);
             send(sockfd, response, responseVal, 0);
             fileDescriptor = open(filename, O_RDONLY);
             ssize_t counter = 0;
@@ -160,7 +160,7 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
         }
     } else {
         status = 400;
-        responseVal = sprintf(response, "%s %d Bad Request\r\n\r\n", http, status);
+        responseVal = sprintf(response, "%s %d Bad Request\r\n", http, status);
         send(sockfd, response, responseVal, 0);
     }
     close(sockfd);
@@ -169,7 +169,15 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
 void parseRequest(char* buffer, uint8_t sockfd) {
     char type[3];
     char http[BUFFER_SIZE];
-    sscanf(buffer, "%s /%*s %s\r\n\r\n", type, http);
+    char filename[27];
+    sscanf(buffer, "%s %s %s\r\n\r\n", type, filename, http);
+    if (filename[0] == '/') {
+        ssize_t responseVal = 0;
+        char response[BUFFER_SIZE];
+        responseVal = sprintf(response, "%s %d Forbidden\r\n", http, 403);
+        send(sockfd, response, responseVal, 0);
+        close(sockfd);
+    }
     if (strcmp(type, "GET") == 0) {
         handleGetRequest(buffer, sockfd);
     } else if (strcmp(type, "PUT") == 0) {
@@ -177,7 +185,7 @@ void parseRequest(char* buffer, uint8_t sockfd) {
     } else {
         ssize_t responseVal = 0;
         char response[BUFFER_SIZE];
-        responseVal = sprintf(response, "%s %d Internal Server Error\r\n\r\n", http, 500);
+        responseVal = sprintf(response, "%s %d Internal Server Error\r\n", http, 500);
         send(sockfd, response, responseVal, 0);
         close(sockfd);
     }
