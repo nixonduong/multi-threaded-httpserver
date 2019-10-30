@@ -106,12 +106,12 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
             responseVal = sprintf(response, "%s %d OK\r\n\r\n", http, status);
         }
         if (statusMSG == 1) {
-            responseVal = sprintf(response, "%s %d CREATED\r\n\r\n", http, status);
+            responseVal = sprintf(response, "%s %d Created\r\n\r\n", http, status);
         }
         send(sockfd, response, responseVal, 0);
     } else {
         status = 400;
-        responseVal = sprintf(response, "%s %d BAD REQUEST\r\n\r\n", http, status);
+        responseVal = sprintf(response, "%s %d Bad Request\r\n\r\n", http, status);
         send(sockfd, response, responseVal, 0);
     }
     close(sockfd);
@@ -119,7 +119,7 @@ void handlePutRequest(char* buffer, uint8_t sockfd) {
 
 void handleGetRequest(char* buffer, uint8_t sockfd) {
     ssize_t responseVal = 0;
-    ssize_t contentLength = -1;
+    ssize_t contentLength = 0;
     uint16_t status = 200;
     char filename[BUFFER_SIZE];
     char http[BUFFER_SIZE];
@@ -131,7 +131,7 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
         ssize_t fileDescriptor = open(filename, O_RDONLY);
         if (fileDescriptor == -1) {
             status = 404;
-            responseVal = sprintf(response, "%s %d NOT FOUND\r\n\r\n", http, status);
+            responseVal = sprintf(response, "%s %d Not Found\r\n\r\n", http, status);
             send(sockfd, response, responseVal, 0);
         } else {
             ssize_t bytesRead = 1;
@@ -160,7 +160,7 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
         }
     } else {
         status = 400;
-        responseVal = sprintf(response, "%s %d BAD REQUEST\r\n\r\n", http, status);
+        responseVal = sprintf(response, "%s %d Bad Request\r\n\r\n", http, status);
         send(sockfd, response, responseVal, 0);
     }
     close(sockfd);
@@ -168,12 +168,18 @@ void handleGetRequest(char* buffer, uint8_t sockfd) {
 
 void parseRequest(char* buffer, uint8_t sockfd) {
     char type[3];
-    sscanf(buffer, "%s", type);
+    char http[BUFFER_SIZE];
+    sscanf(buffer, "%s /%*s %s\r\n\r\n", type, http);
     if (strcmp(type, "GET") == 0) {
         handleGetRequest(buffer, sockfd);
-    }
-    if (strcmp(type, "PUT") == 0) {
+    } else if (strcmp(type, "PUT") == 0) {
         handlePutRequest(buffer, sockfd);
+    } else {
+        ssize_t responseVal = 0;
+        char response[BUFFER_SIZE];
+        responseVal = sprintf(response, "%s %d Internal Server Error\r\n\r\n", http, 500);
+        send(sockfd, response, responseVal, 0);
+        close(sockfd);
     }
 }
 
